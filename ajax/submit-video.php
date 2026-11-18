@@ -5,6 +5,13 @@ if (IS_LOGGED == false || $pt->config->upload_system != 'on') {
     echo json_encode($data);
     exit();
 }
+// TEMP DIAGNOSTIC: report any fatal to the container log so the cause is visible.
+register_shutdown_function(function () {
+    $e = error_get_last();
+    if ($e && in_array($e['type'], array(E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR), true)) {
+        error_log('[playtube-diag] submit fatal: ' . $e['message'] . ' in ' . $e['file'] . ':' . $e['line']);
+    }
+});
 $getID3   = new getID3;
 $featured = ($user->is_pro == 1) ? 1 : 0;
 $filesize = 0;
@@ -301,8 +308,12 @@ if (empty($error)) {
     $insert      = $db->insert(T_VIDEOS, $data_insert);
 
     if ($insert) {
-        require_once dirname(__DIR__) . '/assets/includes/video_pipeline.php';
-        pt_video_pipeline_apply($insert, isset($_POST['video-location']) ? $_POST['video-location'] : '', isset($_POST['title']) ? $_POST['title'] : '');
+        try {
+            require_once dirname(__DIR__) . '/assets/includes/video_pipeline.php';
+            pt_video_pipeline_apply($insert, isset($_POST['video-location']) ? $_POST['video-location'] : '', isset($_POST['title']) ? $_POST['title'] : '');
+        } catch (Throwable $e) {
+            error_log('[playtube] video pipeline failed for video ' . $insert . ': ' . $e->getMessage());
+        }
     }
 
     if ($insert) {

@@ -204,10 +204,10 @@ $old_notifications = $db->where('recipient_id',0)->where('admin',1)->where('seen
 <link href="<?php echo PT_LoadAdminLink('vendors/bootstrap-tagsinput/src/bootstrap-tagsinput.css'); ?>" rel="stylesheet" />
 <?php } ?>
 <?php if ($page == 'custom-design') { ?>
-<script src="<?php echo PT_LoadAdminLink('vendors/codemirror-5.30.0/lib/codemirror.js'); ?>"></script>
-<script src="<?php echo PT_LoadAdminLink('vendors/codemirror-5.30.0/mode/css/css.js'); ?>"></script>
-<script src="<?php echo PT_LoadAdminLink('vendors/codemirror-5.30.0/mode/javascript/javascript.js'); ?>"></script>
-<link rel="stylesheet" href="<?php echo PT_LoadAdminLink('vendors/codemirror-5.30.0/lib/codemirror.css'); ?>">
+<script src="<?php echo PT_LoadAdminLink('vendors/codemirror-5.65.16/lib/codemirror.js'); ?>"></script>
+<script src="<?php echo PT_LoadAdminLink('vendors/codemirror-5.65.16/mode/css/css.js'); ?>"></script>
+<script src="<?php echo PT_LoadAdminLink('vendors/codemirror-5.65.16/mode/javascript/javascript.js'); ?>"></script>
+<link rel="stylesheet" href="<?php echo PT_LoadAdminLink('vendors/codemirror-5.65.16/lib/codemirror.css'); ?>">
 <?php } ?>
 
 

@@ -39,7 +39,7 @@ if [ ! -d "$DATA_DIR/mysql" ]; then
 fi
 
 log "starting MariaDB"
-mariadbd --datadir="$DATA_DIR" --socket="$SOCK" --bind-address=127.0.0.1 --port=3306 \
+mariadbd --user="$(id -un)" --datadir="$DATA_DIR" --socket="$SOCK" --bind-address=127.0.0.1 --port=3306 \
          --skip-name-resolve --skip-log-bin --innodb-buffer-pool-size=128M &
 DB_PID=$!
 FPM_PID=""

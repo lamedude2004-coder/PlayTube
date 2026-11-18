@@ -114,6 +114,7 @@ if (!empty(\$_SERVER['HTTPS']) && strtolower(\$_SERVER['HTTPS']) !== 'off') {
     \$__scheme = 'https';
 }
 \$site_url = \$__scheme . '://' . \$__host;
+\$GLOBALS['PT_DYNAMIC_SITE_URL'] = \$site_url;
 
 \$purchase_code = "";
 \$auto_redirect = false;

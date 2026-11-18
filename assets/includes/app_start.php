@@ -102,6 +102,11 @@ if (empty($site['host'])) {
 
 
 $pt->config               = ToObject($config);
+// AppJet: the imported database ships a stale absolute site_url, so derive it
+// from the current request instead. Keeps assets on the same origin and scheme.
+if (!empty($GLOBALS['PT_DYNAMIC_SITE_URL'])) {
+    $pt->config->site_url = $GLOBALS['PT_DYNAMIC_SITE_URL'];
+}
 $pt->config->withdrawal_payment_method = json_decode($config['withdrawal_payment_method'],true);
 $langs                    = pt_db_langs();
 $pt->langs                = $langs;

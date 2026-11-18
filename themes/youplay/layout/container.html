@@ -610,6 +610,58 @@
       <script type="text/javascript" src="{{CONFIG theme_url}}/js/script.js?version={{CONFIG version}}"></script>
       <script src="{{CONFIG theme_url}}/js/bootstrap-toggle.min.js?version={{CONFIG version}}"></script>
       <script src="{{CONFIG theme_url}}/js/footer.js?version={{CONFIG version}}"></script>
+      <?php if (!empty($pt->get_video->mux_playback_id)) { ?>
+      <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
+      <script>
+         /* Mux streaming: the uploaded file is processed by Mux and served as
+            adaptive HLS. Safari plays the manifest natively, other browsers use
+            hls.js, and the Mux MP4 rendition is the last-resort fallback. */
+         (function () {
+            var playbackId = <?php echo json_encode($pt->get_video->mux_playback_id); ?>;
+            var hlsUrl = 'https://stream.mux.com/' + playbackId + '.m3u8';
+            var mp4Url = 'https://stream.mux.com/' + playbackId + '/capped-1080p.mp4';
+
+            function attach() {
+               var video = document.querySelector('video[id^="my-video"]');
+               if (!video) {
+                  return false;
+               }
+               if (video.getAttribute('data-mux-attached') === '1') {
+                  return true;
+               }
+               video.setAttribute('data-mux-attached', '1');
+               if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                  video.src = hlsUrl;
+               } else if (window.Hls && window.Hls.isSupported()) {
+                  var hls = new window.Hls({ capLevelToPlayerSize: true });
+                  hls.loadSource(hlsUrl);
+                  hls.attachMedia(video);
+               } else {
+                  video.src = mp4Url;
+               }
+               return true;
+            }
+
+            function start() {
+               if (attach()) {
+                  return;
+               }
+               var tries = 0;
+               var timer = setInterval(function () {
+                  if (attach() || ++tries > 20) {
+                     clearInterval(timer);
+                  }
+               }, 300);
+            }
+
+            if (document.readyState === 'complete') {
+               start();
+            } else {
+               window.addEventListener('load', start);
+            }
+         })();
+      </script>
+      <?php } ?>
       <link rel="" ="">
       <script>
          $(window).on("popstate", function (e) {

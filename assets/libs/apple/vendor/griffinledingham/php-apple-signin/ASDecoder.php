@@ -2,10 +2,22 @@
 
 namespace AppleSignIn;
 
-use AppleSignIn\Vendor\JWK;
-use AppleSignIn\Vendor\JWT;
+use Firebase\JWT\JWK;
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
 
 use Exception;
+
+// Verify tokens with the maintained firebase/php-jwt (7.2.2) already vendored in
+// this repository instead of the bundled 5.4.0 copy, which carries
+// GHSA-8xf4-w7qw-pjjw (kid/algorithm confusion) and GHSA-2x45-7fc3-mxwq (weak
+// encryption). Both are only fixed in 6.0.0+ and 7.0.0+ respectively.
+if (!class_exists(JWT::class)) {
+    $jwtAutoload = __DIR__ . '/../../../../google-lib/vendor/autoload.php';
+    if (is_file($jwtAutoload)) {
+        require_once $jwtAutoload;
+    }
+}
 
 /**
  * Decode Sign In with Apple identity token, and produce an ASPayload for
@@ -36,16 +48,60 @@ class ASDecoder {
      * @return object
      */
     public static function decodeIdentityToken(string $identityToken) : object {
-        $publicKeyKid = JWT::getPublicKeyKid($identityToken);
+        $publicKeyKid = self::getPublicKeyKid($identityToken);
 
         $publicKeyData = self::fetchPublicKey($publicKeyKid);
 
-        $publicKey = $publicKeyData['publicKey'];
-        $alg = $publicKeyData['alg'];
+        return self::decodeWithPublicKeyData($identityToken, $publicKeyData);
+    }
 
-        $payload = JWT::decode($identityToken, $publicKey, [$alg]);
+    /**
+     * Verify an identity token against already-resolved key data.
+     *
+     * Split out from decodeIdentityToken so the verification step can be
+     * exercised without calling Apple's key endpoint.
+     *
+     * @param string $identityToken
+     * @param array $publicKeyData
+     * @return object
+     */
+    public static function decodeWithPublicKeyData(string $identityToken, array $publicKeyData) : object {
+        if (!isset($publicKeyData['publicKey'], $publicKeyData['alg'])) {
+            throw new Exception('Invalid public key data.');
+        }
 
-        return $payload;
+        // Key pins the expected algorithm, so a token cannot downgrade it.
+        return JWT::decode($identityToken, new Key($publicKeyData['publicKey'], $publicKeyData['alg']));
+    }
+
+    /**
+     * Read the "kid" from the token header so Apple's matching key can be fetched.
+     *
+     * @param string $identityToken
+     * @return string
+     */
+    public static function getPublicKeyKid(string $identityToken) : string {
+        $segments = explode('.', $identityToken);
+
+        if (count($segments) !== 3) {
+            throw new Exception('Invalid identity token format.');
+        }
+
+        $encodedHeader = strtr($segments[0], '-_', '+/');
+        $paddedHeader = str_pad($encodedHeader, (int) (ceil(strlen($encodedHeader) / 4) * 4), '=');
+        $headerJson = base64_decode($paddedHeader, true);
+
+        if ($headerJson === false) {
+            throw new Exception('Invalid identity token header.');
+        }
+
+        $header = json_decode($headerJson, true);
+
+        if (!is_array($header) || !isset($header['kid']) || !is_string($header['kid']) || $header['kid'] === '') {
+            throw new Exception('Identity token header is missing a key id.');
+        }
+
+        return $header['kid'];
     }
 
     /**
@@ -64,17 +120,28 @@ class ASDecoder {
         }
 
         $kids = array_column($decodedPublicKeys['keys'], 'kid');
-        $parsedKeyData = $decodedPublicKeys['keys'][array_search($publicKeyKid, $kids)];
-        $parsedPublicKey= JWK::parseKey($parsedKeyData);
-        $publicKeyDetails = openssl_pkey_get_details($parsedPublicKey);
+        $keyIndex = array_search($publicKeyKid, $kids, true);
 
-        if(!isset($publicKeyDetails['key'])) {
+        if ($keyIndex === false) {
+            throw new Exception('No public key matches the provided key id.');
+        }
+
+        $parsedKeyData = $decodedPublicKeys['keys'][$keyIndex];
+        $parsedPublicKey = JWK::parseKey($parsedKeyData);
+
+        if (!$parsedPublicKey instanceof Key) {
+            throw new Exception('Invalid public key details.');
+        }
+
+        $publicKeyMaterial = $parsedPublicKey->getKeyMaterial();
+
+        if (!is_string($publicKeyMaterial) || $publicKeyMaterial === '') {
             throw new Exception('Invalid public key details.');
         }
 
         return [
-            'publicKey' => $publicKeyDetails['key'],
-            'alg' => $parsedKeyData['alg']
+            'publicKey' => $publicKeyMaterial,
+            'alg' => $parsedPublicKey->getAlgorithm()
         ];
     }
 }

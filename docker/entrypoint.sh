@@ -102,11 +102,13 @@ cat > "$APP_ROOT/config.php" <<PHP
 \$__proto = isset(\$_SERVER['HTTP_X_FORWARDED_PROTO']) ? strtolower(trim(explode(',', \$_SERVER['HTTP_X_FORWARDED_PROTO'])[0])) : '';
 if (!empty(\$_SERVER['HTTPS']) && strtolower(\$_SERVER['HTTPS']) !== 'off') {
     \$__scheme = 'https';
-} elseif (\$__proto !== '') {
-    \$__scheme = \$__proto === 'https' ? 'https' : 'http';
-} elseif (!empty(\$_SERVER['HTTP_X_FORWARDED_SSL']) && \$_SERVER['HTTP_X_FORWARDED_SSL'] === 'on') {
-    \$__scheme = 'https';
 } elseif (!empty(\$_SERVER['HTTP_CF_VISITOR']) && strpos(\$_SERVER['HTTP_CF_VISITOR'], 'https') !== false) {
+    \$__scheme = 'https';
+} elseif (\$__proto === 'https') {
+    // The origin hop is plain HTTP, so a 'http' value here describes the proxy
+    // leg rather than the client, and must not downgrade the site URL.
+    \$__scheme = 'https';
+} elseif (!empty(\$_SERVER['HTTP_X_FORWARDED_SSL']) && \$_SERVER['HTTP_X_FORWARDED_SSL'] === 'on') {
     \$__scheme = 'https';
 } elseif (strpos(\$__host, 'localhost') === false && strpos(\$__host, '127.0.0.1') === false) {
     \$__scheme = 'https';

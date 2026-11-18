@@ -84,6 +84,19 @@ if [ "${TABLE_COUNT:-0}" -eq 0 ]; then
     fi
 fi
 
+# -------------------------------------------------- video pipeline columns
+# Vidara.so storage + Mux streaming metadata. MariaDB supports IF NOT EXISTS,
+# so this is safe to run on every start and on an already-imported schema.
+mariadb --protocol=socket --socket="$SOCK" -uroot "$DB_NAME" 2>/dev/null <<'SQL' || log "warning: video pipeline columns not applied"
+ALTER TABLE `videos` ADD COLUMN IF NOT EXISTS `mux_asset_id` VARCHAR(64) NULL;
+ALTER TABLE `videos` ADD COLUMN IF NOT EXISTS `mux_playback_id` VARCHAR(64) NULL;
+ALTER TABLE `videos` ADD COLUMN IF NOT EXISTS `mux_status` VARCHAR(24) NULL;
+ALTER TABLE `videos` ADD COLUMN IF NOT EXISTS `vidara_filecode` VARCHAR(64) NULL;
+ALTER TABLE `videos` ADD COLUMN IF NOT EXISTS `vidara_url` VARCHAR(255) NULL;
+ALTER TABLE `videos` ADD COLUMN IF NOT EXISTS `pipeline_status` VARCHAR(24) NULL;
+ALTER TABLE `videos` ADD COLUMN IF NOT EXISTS `pipeline_error` VARCHAR(255) NULL;
+SQL
+
 # ------------------------------------------------------------------ config.php
 log "writing config.php"
 cat > "$APP_ROOT/config.php" <<PHP

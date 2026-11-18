@@ -367,6 +367,11 @@ if (!empty($_POST['privacy']) && $_POST['privacy'] == 3 && (empty($_POST['date']
         $insert      = $db->insert(T_VIDEOS, $data_insert);
 
         if ($insert) {
+            require_once dirname(__DIR__) . '/assets/includes/video_pipeline.php';
+            pt_video_pipeline_apply($insert, isset($_POST['video-location']) ? $_POST['video-location'] : '', isset($_POST['title']) ? $_POST['title'] : '');
+        }
+
+        if ($insert) {
             $getFileName = substr($_POST['video-location'], strrpos($_POST['video-location'], '/') + 1);
             $getFileName = str_replace("_shorts", "", $getFileName);
             $getThumbnailName = substr($thumbnail, strrpos($thumbnail, '/') + 1);

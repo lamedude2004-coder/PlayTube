@@ -301,6 +301,11 @@ if (empty($error)) {
     $insert      = $db->insert(T_VIDEOS, $data_insert);
 
     if ($insert) {
+        require_once dirname(__DIR__) . '/assets/includes/video_pipeline.php';
+        pt_video_pipeline_apply($insert, isset($_POST['video-location']) ? $_POST['video-location'] : '', isset($_POST['title']) ? $_POST['title'] : '');
+    }
+
+    if ($insert) {
         if ($video_privacy == 0) {
             pt_push_channel_notifiations($video_id);
         }

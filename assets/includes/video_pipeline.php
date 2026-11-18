@@ -410,14 +410,8 @@ class PT_VideoPipeline
 
         $errors = array();
 
-        if (self::vidaraEnabled()) {
-            $vidara = self::vidaraUpload($filePath, $title);
-            $out['vidara'] = $vidara;
-            if (!$vidara['ok']) {
-                $errors[] = $vidara['error'];
-            }
-        }
-
+        // Mux first: it returns a playback id quickly, so the video is
+        // playable even if the storage copy is slow.
         if (self::muxEnabled()) {
             $mux = self::muxCreateAssetFromUrl($publicUrl, $title);
             if (!$mux['ok']) {
@@ -427,6 +421,14 @@ class PT_VideoPipeline
             $out['mux'] = $mux;
             if (!$mux['ok']) {
                 $errors[] = $mux['error'];
+            }
+        }
+
+        if (self::vidaraEnabled()) {
+            $vidara = self::vidaraUpload($filePath, $title);
+            $out['vidara'] = $vidara;
+            if (!$vidara['ok']) {
+                $errors[] = $vidara['error'];
             }
         }
 
@@ -472,4 +474,50 @@ class PT_VideoPipeline
 
         return $fields;
     }
+}
+
+/**
+ * Run the storage/streaming pipeline for a video that was just inserted.
+ * Called from the PlayTube upload handlers immediately after the insert; it
+ * never throws so a provider outage cannot break the upload.
+ *
+ * @param int    $video_id      id of the new row in the videos table
+ * @param string $relative_path uploaded file path relative to the app root
+ * @param string $title         video title
+ */
+function pt_video_pipeline_apply($video_id, $relative_path, $title = '')
+{
+    global $db;
+
+    if (empty($video_id) || !is_object($db) || !class_exists('PT_VideoPipeline')) {
+        return null;
+    }
+    if (!PT_VideoPipeline::enabled()) {
+        return null;
+    }
+
+    $relative_path = ltrim(str_replace('\\', '/', (string) $relative_path), '/');
+    if ($relative_path === '') {
+        return null;
+    }
+
+    $absolute = dirname(__DIR__, 2) . '/' . $relative_path;
+    if (!is_file($absolute)) {
+        return null;
+    }
+
+    $public_url = function_exists('PT_Link') ? PT_Link($relative_path) : '';
+    if (!is_string($public_url) || $public_url === '') {
+        return null;
+    }
+
+    $result = PT_VideoPipeline::process($absolute, $public_url, (string) $title);
+
+    $fields = PT_VideoPipeline::dbFields($result);
+    if (!empty($fields)) {
+        $table = defined('T_VIDEOS') ? T_VIDEOS : 'videos';
+        $db->where('id', $video_id)->update($table, $fields);
+    }
+
+    return $result;
 }

@@ -3,7 +3,7 @@
         'name' => '__root__',
         'pretty_version' => 'dev-appjet',
         'version' => 'dev-appjet',
-        'reference' => 'd28245360bd1ec3ffa7ffabebb08a255d10faf97',
+        'reference' => '2874c121e66ad0f7175e15bbbb9c4665dcfeeda5',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -13,7 +13,7 @@
         '__root__' => array(
             'pretty_version' => 'dev-appjet',
             'version' => 'dev-appjet',
-            'reference' => 'd28245360bd1ec3ffa7ffabebb08a255d10faf97',
+            'reference' => '2874c121e66ad0f7175e15bbbb9c4665dcfeeda5',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

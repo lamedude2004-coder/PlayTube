@@ -168,8 +168,11 @@ class PT_VideoPipeline
         }
 
         $fields = array(
-            'key'  => self::vidaraKey(),
-            'file' => new CURLFile($filePath, 'video/mp4', basename($filePath)),
+            // The upload server authenticates on api_key; the published docs
+            // say "key", which it rejects with HTTP 401. Send both.
+            'api_key' => self::vidaraKey(),
+            'key'     => self::vidaraKey(),
+            'file'    => new CURLFile($filePath, 'video/mp4', basename($filePath)),
         );
         if ($title !== '') {
             $fields['title'] = $title;
@@ -185,29 +188,55 @@ class PT_VideoPipeline
             return array('ok' => false, 'error' => 'Vidara upload failed (HTTP ' . $res['code'] . ')');
         }
 
-        $filecode = self::dig($res['json'], 'result.filecode');
-        if (!$filecode) {
-            $filecode = self::dig($res['json'], 'result.file_code');
+        // The response shape differs between endpoints: {"filecode": "..."}
+        // at the top level, or nested under result. filecode may already be a
+        // full share URL rather than a bare code.
+        $raw = self::dig($res['json'], 'result.filecode');
+        foreach (array('filecode', 'result.file_code', 'file_code', 'result.code', 'result.link', 'link') as $path) {
+            if (!empty($raw)) {
+                break;
+            }
+            $raw = self::dig($res['json'], $path);
         }
-        if (!$filecode) {
-            $filecode = self::dig($res['json'], 'result.code');
-        }
-        if (!$filecode) {
+        if (empty($raw)) {
             self::log('vidara upload without filecode: ' . substr($res['body'], 0, 300));
             return array('ok' => false, 'error' => 'Vidara response did not include a filecode');
         }
 
-        $link = self::dig($res['json'], 'result.link');
-        if (!is_string($link) || $link === '') {
-            $link = 'https://vidara.so/e/' . $filecode;
+        $filecode = (string) $raw;
+        $link     = '';
+        if (preg_match('#^https?://#i', $filecode)) {
+            $link     = $filecode;
+            $path     = parse_url($filecode, PHP_URL_PATH);
+            $filecode = ($path !== null && $path !== false) ? basename($path) : '';
+        }
+        if ($link === '') {
+            $link = 'https://vidara.to/e/' . $filecode;
         }
 
         return array(
             'ok'       => true,
             'filecode' => (string) $filecode,
             'url'      => $link,
+            'video_id' => self::dig($res['json'], 'video_id'),
         );
     }
+
+    /**
+     * Best-effort: use the Mux thumbnail as the Vidara poster.
+     */
+    public static function vidaraSetThumb($filecode, $thumbUrl)
+    {
+        if (!self::vidaraEnabled() || $filecode === '' || $thumbUrl === '') {
+            return false;
+        }
+        $res = self::http('GET', self::VIDARA_API . '/upload/thumb?api_key=' . urlencode(self::vidaraKey())
+            . '&filecode=' . urlencode($filecode) . '&thumb_url=' . urlencode($thumbUrl), array('timeout' => 60));
+        if ($res['code'] !== 200) {
+            self::log('vidara thumb http ' . $res['code']);
+            return false;
+        }
+        return true;
 
     public static function vidaraInfo($filecode)
     {
@@ -429,6 +458,9 @@ class PT_VideoPipeline
             $out['vidara'] = $vidara;
             if (!$vidara['ok']) {
                 $errors[] = $vidara['error'];
+            } elseif (!empty($out['mux']['ok']) && !empty($out['mux']['thumbnail'])) {
+                // Reuse the Mux poster on the storage copy.
+                self::vidaraSetThumb($vidara['filecode'], $out['mux']['thumbnail']);
             }
         }
 

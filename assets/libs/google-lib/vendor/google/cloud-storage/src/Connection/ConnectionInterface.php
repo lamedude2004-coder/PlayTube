@@ -20,6 +20,8 @@ namespace Google\Cloud\Storage\Connection;
 /**
  * Represents a connection to
  * [Cloud Storage](https://cloud.google.com/storage/).
+ *
+ * @internal
  */
 interface ConnectionInterface
 {
@@ -52,6 +54,11 @@ interface ConnectionInterface
      * @param array $args
      */
     public function deleteBucket(array $args = []);
+
+    /**
+     * @param array $args
+     */
+    public function restoreBucket(array $args = []);
 
     /**
      * @param array $args
@@ -96,6 +103,11 @@ interface ConnectionInterface
     /**
      * @param array $args
      */
+    public function restoreObject(array $args = []);
+
+    /**
+     * @param array $args
+     */
     public function copyObject(array $args = []);
 
     /**
@@ -106,12 +118,23 @@ interface ConnectionInterface
     /**
      * @param array $args
      */
+    public function moveObject(array $args = []);
+
+    /**
+     * @param array $args
+     */
     public function composeObject(array $args = []);
 
     /**
      * @param array $args
      */
     public function getObject(array $args = []);
+
+    /**
+     * @param array $args
+     * @return array
+     */
+    public function headObject(array $args = []): array;
 
     /**
      * @param array $args

@@ -4,14 +4,14 @@ FROM php:8.4.27-fpm-alpine
 RUN echo "os-refresh 2026-12-04" && apk upgrade --no-cache
 
 RUN set -eux; \
-    apk add --no-cache nginx mariadb mariadb-client ffmpeg tzdata \
-        libpng libjpeg-turbo freetype libzip; \
+    apk add --no-cache nginx mariadb mariadb-client ffmpeg tzdata curl \
+        libpng libjpeg-turbo freetype libzip libcurl; \
     apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
-        libpng-dev libjpeg-turbo-dev freetype-dev libzip-dev; \
+        libpng-dev libjpeg-turbo-dev freetype-dev libzip-dev curl-dev openssl-dev zlib-dev; \
     if ! php -m | grep -qix gd; then \
         docker-php-ext-configure gd --with-freetype --with-jpeg; \
     fi; \
-    for ext in mysqli gd exif zip calendar mbstring; do \
+    for ext in mysqli gd exif zip calendar mbstring curl; do \
         php -m | grep -qix "$ext" || docker-php-ext-install -j"$(nproc)" "$ext"; \
     done; \
     apk del .build-deps; \

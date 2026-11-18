@@ -528,6 +528,11 @@ function pt_video_pipeline_apply($video_id, $relative_path, $title = '')
     if (!PT_VideoPipeline::enabled()) {
         return null;
     }
+    // Never break the upload flow when the PHP curl extension is unavailable.
+    if (!function_exists('curl_init')) {
+        error_log('[playtube] video pipeline skipped: PHP curl extension missing');
+        return null;
+    }
 
     $relative_path = ltrim(str_replace('\\', '/', (string) $relative_path), '/');
     if ($relative_path === '') {

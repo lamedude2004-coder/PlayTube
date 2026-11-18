@@ -1,6 +1,6 @@
 #!/bin/sh
 # PlayTube container bootstrap: start MariaDB, import the bundled schema,
-# seed site settings, generate config.php, then run Apache in the foreground.
+# seed site settings, generate config.php, then serve with php-fpm + nginx.
 set -eu
 
 APP_ROOT=/var/www/html
@@ -13,7 +13,7 @@ PASS_FILE="$DATA_DIR/.appjet_db_password"
 
 log() { printf '[playtube] %s\n' "$*"; }
 
-mkdir -p /run/mysqld /run/apache2 /var/log/apache2 "$APP_ROOT/upload"
+mkdir -p /run/mysqld /var/lib/nginx/tmp "$APP_ROOT/upload"
 
 # ---------------------------------------------------------------- DB password
 if [ -n "${DB_PASSWORD:-}" ]; then
@@ -39,11 +39,13 @@ log "starting MariaDB"
 mariadbd --datadir="$DATA_DIR" --socket="$SOCK" --bind-address=127.0.0.1 --port=3306 \
          --skip-name-resolve --skip-log-bin --innodb-buffer-pool-size=128M &
 DB_PID=$!
+FPM_PID=""
 
-shutdown_db() {
+shutdown_all() {
+    [ -n "$FPM_PID" ] && kill "$FPM_PID" 2>/dev/null || true
     mariadb-admin --socket="$SOCK" -uroot shutdown 2>/dev/null || kill "$DB_PID" 2>/dev/null || true
 }
-trap 'shutdown_db; exit 0' INT TERM
+trap 'shutdown_all; exit 0' INT TERM
 
 i=0
 until mariadb --protocol=socket --socket="$SOCK" -uroot -e 'SELECT 1' >/dev/null 2>&1; do
@@ -110,23 +112,14 @@ SITE_TITLE="${SITE_TITLE:-PlayTube - Video Sharing Platform}" \
 SITE_EMAIL="${SITE_EMAIL:-admin@example.com}" \
 ADMIN_USERNAME="${ADMIN_USERNAME:-admin}" \
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin123456}" \
-php83 /usr/local/bin/seed-config.php || log "warning: seeding reported an error"
+php /usr/local/bin/seed-config.php || log "warning: seeding reported an error"
 
-# ------------------------------------------------------------------- Apache
-log "configuring Apache on port $PORT"
-sed -i -E 's/^[[:space:]]*Listen[[:space:]].*/# Listen is defined in conf.d\/zz-playtube.conf/' /etc/apache2/httpd.conf
-sed -i -E 's/^User[[:space:]].*/User app/; s/^Group[[:space:]].*/Group app/' /etc/apache2/httpd.conf
-sed -i -E "s#^Listen .*#Listen ${PORT}#; s#<VirtualHost \*:[0-9]+>#<VirtualHost *:${PORT}>#" /etc/apache2/conf.d/zz-playtube.conf
+# ---------------------------------------------------------------- php-fpm + nginx
+log "starting php-fpm"
+php-fpm -y /usr/local/etc/php-fpm.conf &
+FPM_PID=$!
 
-MODULE_CONF=/etc/apache2/conf.d/00-appjet-modules.conf
-: > "$MODULE_CONF"
-for mod in mpm_prefork authz_core authz_host authn_core authn_file auth_basic access_compat \
-           rewrite headers expires deflate filter setenvif alias dir mime negotiation env; do
-    f="/usr/lib/apache2/modules/mod_${mod}.so"
-    [ -f "$f" ] || continue
-    grep -qs "mod_${mod}\.so" /etc/apache2/httpd.conf && continue
-    echo "LoadModule ${mod}_module ${f}" >> "$MODULE_CONF"
-done
+sed -i -E "s#^([[:space:]]*)listen [0-9]+;#\1listen ${PORT};#" /etc/nginx/nginx.conf
 
-log "starting Apache"
-exec httpd -D FOREGROUND -f /etc/apache2/httpd.conf
+log "starting nginx on port $PORT"
+exec nginx -g 'daemon off;'

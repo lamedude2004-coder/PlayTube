@@ -8,12 +8,15 @@ RUN set -eux; \
         libpng libjpeg-turbo freetype libzip libcurl; \
     apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
         libpng-dev libjpeg-turbo-dev freetype-dev libzip-dev curl-dev openssl-dev zlib-dev; \
-    if ! php -m | grep -qix gd; then \
-        docker-php-ext-configure gd --with-freetype --with-jpeg; \
-    fi; \
-    for ext in mysqli gd exif zip calendar mbstring curl; do \
+    for ext in mysqli exif zip calendar mbstring curl; do \
         php -m | grep -qix "$ext" || docker-php-ext-install -j"$(nproc)" "$ext"; \
     done; \
+    if ! php -r 'exit(function_exists("imagecreatefromjpeg") ? 0 : 1);'; then \
+        rm -f /usr/local/etc/php/conf.d/docker-php-ext-gd.ini; \
+        docker-php-ext-configure gd --with-freetype --with-jpeg; \
+        docker-php-ext-install -j"$(nproc)" gd; \
+    fi; \
+    php -r 'foreach (array("imagecreatefromjpeg","imagecreatefrompng","imagecreatetruecolor") as $f) { if (!function_exists($f)) { fwrite(STDERR, "FATAL: PHP GD is missing $f\n"); exit(1); } }'; \
     apk del .build-deps; \
     rm -rf /tmp/pear
 

@@ -95,10 +95,23 @@ cat > "$APP_ROOT/config.php" <<PHP
 \$sql_db_name = "$DB_NAME";
 
 // Site URL follows the request host so the same image works on any domain.
-\$site_url = ((!empty(\$_SERVER['HTTPS']) && \$_SERVER['HTTPS'] !== 'off')
-    || (!empty(\$_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower(\$_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https'))
-    ? 'https://' : 'http://';
-\$site_url .= isset(\$_SERVER['HTTP_HOST']) ? \$_SERVER['HTTP_HOST'] : 'localhost';
+// The public deployment terminates TLS at a proxy, so trust proxy headers
+// instead of only checking the FastCGI HTTPS flag.
+\$__scheme = 'http';
+\$__host = isset(\$_SERVER['HTTP_HOST']) ? strtolower(\$_SERVER['HTTP_HOST']) : 'localhost';
+\$__proto = isset(\$_SERVER['HTTP_X_FORWARDED_PROTO']) ? strtolower(trim(explode(',', \$_SERVER['HTTP_X_FORWARDED_PROTO'])[0])) : '';
+if (!empty(\$_SERVER['HTTPS']) && strtolower(\$_SERVER['HTTPS']) !== 'off') {
+    \$__scheme = 'https';
+} elseif (\$__proto !== '') {
+    \$__scheme = \$__proto === 'https' ? 'https' : 'http';
+} elseif (!empty(\$_SERVER['HTTP_X_FORWARDED_SSL']) && \$_SERVER['HTTP_X_FORWARDED_SSL'] === 'on') {
+    \$__scheme = 'https';
+} elseif (!empty(\$_SERVER['HTTP_CF_VISITOR']) && strpos(\$_SERVER['HTTP_CF_VISITOR'], 'https') !== false) {
+    \$__scheme = 'https';
+} elseif (strpos(\$__host, 'localhost') === false && strpos(\$__host, '127.0.0.1') === false) {
+    \$__scheme = 'https';
+}
+\$site_url = \$__scheme . '://' . \$__host;
 
 \$purchase_code = "";
 \$auto_redirect = false;

@@ -237,6 +237,7 @@ class PT_VideoPipeline
             return false;
         }
         return true;
+    }
 
     public static function vidaraInfo($filecode)
     {

@@ -508,6 +508,10 @@ function pt_video_pipeline_apply($video_id, $relative_path, $title = '')
 
     $public_url = function_exists('PT_Link') ? PT_Link($relative_path) : '';
     if (!is_string($public_url) || $public_url === '') {
+        $base = !empty($GLOBALS['pt']->site_url) ? rtrim($GLOBALS['pt']->site_url, '/') : '';
+        $public_url = ($base !== '') ? $base . '/' . $relative_path : '';
+    }
+    if (!is_string($public_url) || $public_url === '') {
         return null;
     }
 

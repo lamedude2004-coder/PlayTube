@@ -29,7 +29,10 @@ fi
 # ------------------------------------------------------------- MariaDB server
 if [ ! -d "$DATA_DIR/mysql" ]; then
     log "initialising MariaDB data directory"
-    if ! mariadb-install-db --user="$(id -un)" --datadir="$DATA_DIR" --skip-test-db >/tmp/mariadb-install.log 2>&1; then
+    # The container runs unprivileged, so root must use password auth over the
+    # socket instead of unix_socket auth (which would require the root OS user).
+    if ! mariadb-install-db --user="$(id -un)" --datadir="$DATA_DIR" --skip-test-db \
+            --auth-root-authentication-method=normal >/tmp/mariadb-install.log 2>&1; then
         cat /tmp/mariadb-install.log
         exit 1
     fi
@@ -50,7 +53,7 @@ trap 'shutdown_all; exit 0' INT TERM
 i=0
 until mariadb --protocol=socket --socket="$SOCK" -uroot -e 'SELECT 1' >/dev/null 2>&1; do
     i=$((i + 1))
-    if [ "$i" -gt 90 ]; then
+    if [ "$i" -gt 60 ]; then
         log "MariaDB did not become ready"
         tail -n 40 "$DATA_DIR"/*.err 2>/dev/null || true
         exit 1

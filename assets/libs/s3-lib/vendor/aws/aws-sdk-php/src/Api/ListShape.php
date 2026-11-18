@@ -32,12 +32,4 @@ class ListShape extends Shape
 
         return $this->member;
     }
-
-    /**
-     * @return void
-     */
-    protected function clearResolvedModelCache()
-    {
-        $this->member = null;
-    }
 }

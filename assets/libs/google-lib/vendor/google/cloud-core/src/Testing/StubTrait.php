@@ -35,6 +35,8 @@ trait StubTrait
     public function ___getProperty($prop)
     {
         $property = $this->___getPropertyReflector($prop);
+
+        $property->setAccessible(true);
         return $property->getValue($this);
     }
 
@@ -52,6 +54,8 @@ trait StubTrait
         }
 
         $property = $this->___getPropertyReflector($prop);
+
+        $property->setAccessible(true);
         $property->setValue($this, $value);
     }
 

@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 namespace GuzzleHttp;
 
 use Psr\Http\Message\MessageInterface;
@@ -28,16 +26,16 @@ use Psr\Http\Message\ResponseInterface;
  * - {code}:           Status code of the response (if available)
  * - {phrase}:         Reason phrase of the response  (if available)
  * - {error}:          Any error messages (if available)
- * - {req_header_*}:   Replace `*` with the lowercased name of a request header
- *                     to add to the message
- * - {res_header_*}:   Replace `*` with the lowercased name of a response header
- *                     to add to the message
+ * - {req_header_*}:   Replace `*` with the lowercased name of a request header to add to the message
+ * - {res_header_*}:   Replace `*` with the lowercased name of a response header to add to the message
  * - {req_headers}:    Request headers
  * - {res_headers}:    Response headers
  * - {req_body}:       Request body
  * - {res_body}:       Response body
+ *
+ * @final
  */
-final class MessageFormatter implements MessageFormatterInterface
+class MessageFormatter implements MessageFormatterInterface
 {
     /**
      * Apache Common Log Format.
@@ -53,7 +51,7 @@ final class MessageFormatter implements MessageFormatterInterface
     /**
      * @var string Template used to format log messages
      */
-    private string $template;
+    private $template;
 
     /**
      * @param string $template Log message template
@@ -70,13 +68,14 @@ final class MessageFormatter implements MessageFormatterInterface
      * @param ResponseInterface|null $response Response that was received
      * @param \Throwable|null        $error    Exception that was received
      */
-    public function format(RequestInterface $request, ?ResponseInterface $response = null, ?\Throwable $error = null): string
+    public function format(RequestInterface $request, ResponseInterface $response = null, \Throwable $error = null): string
     {
         $cache = [];
 
-        $result = \preg_replace_callback(
+        /** @var string */
+        return \preg_replace_callback(
             '/{\s*([A-Za-z_\-\.0-9]+)\s*}/',
-            function (array $matches) use ($request, $response, $error, &$cache): string {
+            function (array $matches) use ($request, $response, $error, &$cache) {
                 if (isset($cache[$matches[1]])) {
                     return $cache[$matches[1]];
                 }
@@ -91,7 +90,7 @@ final class MessageFormatter implements MessageFormatterInterface
                         break;
                     case 'req_headers':
                         $result = \trim($request->getMethod()
-                                .' '.$request->getRequestTarget(), " \n\r\t\0\x0B")
+                                .' '.$request->getRequestTarget())
                             .' HTTP/'.$request->getProtocolVersion()."\r\n"
                             .$this->headers($request);
                         break;
@@ -177,19 +176,12 @@ final class MessageFormatter implements MessageFormatterInterface
                         }
                 }
 
-                $result = (string) $result;
                 $cache[$matches[1]] = $result;
 
                 return $result;
             },
             $this->template
         );
-
-        if ($result === null) {
-            throw new \RuntimeException('Unable to format message: '.\preg_last_error_msg());
-        }
-
-        return $result;
     }
 
     /**
@@ -202,6 +194,6 @@ final class MessageFormatter implements MessageFormatterInterface
             $result .= $name.': '.\implode(', ', $values)."\r\n";
         }
 
-        return \trim($result, " \n\r\t\0\x0B");
+        return \trim($result);
     }
 }

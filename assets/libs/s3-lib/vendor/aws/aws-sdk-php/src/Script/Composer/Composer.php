@@ -2,39 +2,20 @@
 namespace Aws\Script\Composer;
 
 use Composer\Script\Event;
-use Symfony\Component\Filesystem\Exception\IOException;
 use Symfony\Component\Filesystem\Filesystem;
 
 class Composer
 {
-    private static array $unsafeForDeletion = [
-        'Kms' => true,
-        'S3' => true ,
-        'SSO' => true,
-        'SSOOIDC' => true,
-        'Sts' => true,
-        'Signin' => true
-    ];
-
-    public static function removeUnusedServicesInDev(Event $event, ?Filesystem $filesystem = null)
+    public static function removeUnusedServices(
+        Event      $event,
+        Filesystem $filesystem = null
+    )
     {
-        self::removeUnusedServicesWithConfig($event, $filesystem, true);
-    }
-
-    public static function removeUnusedServices(Event $event, ?Filesystem $filesystem = null)
-    {
-        self::removeUnusedServicesWithConfig($event, $filesystem, false);
-    }
-
-    private static function removeUnusedServicesWithConfig(Event $event, ?Filesystem $filesystem = null, $isDev = false)
-    {
-        if ($isDev && !$event->isDevMode()){
-            return;
-        }
-
         $composer = $event->getComposer();
         $extra = $composer->getPackage()->getExtra();
-        $listedServices = $extra['aws/aws-sdk-php'] ?? [];
+        $listedServices = isset($extra['aws/aws-sdk-php'])
+            ? $extra['aws/aws-sdk-php']
+            : [];
 
         if ($listedServices) {
             $serviceMapping = self::buildServiceMapping();
@@ -85,9 +66,9 @@ class Composer
         $listedServices,
         $vendorPath
     ) {
-        $unsafeForDeletion = self::$unsafeForDeletion;
+        $unsafeForDeletion = ['Kms', 'S3', 'SSO', 'Sts'];
         if (in_array('DynamoDbStreams', $listedServices)) {
-            $unsafeForDeletion['DynamoDb'] = true;
+            $unsafeForDeletion[] = 'DynamoDb';
         }
 
         $clientPath = $vendorPath . '/aws/aws-sdk-php/src/';
@@ -96,37 +77,14 @@ class Composer
 
         foreach ($serviceMapping as $clientName => $modelName) {
             if (!in_array($clientName, $listedServices) &&
-                !isset($unsafeForDeletion[$clientName])
+                !in_array($clientName, $unsafeForDeletion)
             ) {
                 $clientDir = $clientPath . $clientName;
                 $modelDir = $modelPath . $modelName;
 
                 if ($filesystem->exists([$clientDir, $modelDir])) {
-                    $attempts = 3;
-                    $delay = 2;
-
-                    while ($attempts) {
-                        try {
-                            $filesystem->remove([$clientDir, $modelDir]);
-                            $deleteCount++;
-                            break;
-                        } catch (IOException $e) {
-                            $attempts--;
-
-                            if (!$attempts) {
-                                throw new IOException(
-                                    "Removal failed after several attempts. Last error: " . $e->getMessage()
-                                );
-                            } else {
-                                sleep($delay);
-                                $event->getIO()->write(
-                                    "Error encountered: " . $e->getMessage() . ". Retrying..."
-                                );
-                                $delay += 2;
-                            }
-                    }
-                }
-
+                    $filesystem->remove([$clientDir, $modelDir]);;
+                    $deleteCount++;
                 }
             }
         }

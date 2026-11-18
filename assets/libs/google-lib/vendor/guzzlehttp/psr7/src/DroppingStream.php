@@ -13,11 +13,12 @@ use Psr\Http\Message\StreamInterface;
 final class DroppingStream implements StreamInterface
 {
     use StreamDecoratorTrait;
-    use NonSerializableStreamTrait;
 
-    private int $maxLength;
+    /** @var int */
+    private $maxLength;
 
-    private StreamInterface $stream;
+    /** @var StreamInterface */
+    private $stream;
 
     /**
      * @param StreamInterface $stream    Underlying stream to decorate.
@@ -26,10 +27,10 @@ final class DroppingStream implements StreamInterface
     public function __construct(StreamInterface $stream, int $maxLength)
     {
         $this->stream = $stream;
-        $this->maxLength = Integers::assertNonNegativeInteger($maxLength, 'Maximum length');
+        $this->maxLength = $maxLength;
     }
 
-    public function write(string $string): int
+    public function write($string): int
     {
         $diff = $this->maxLength - $this->stream->getSize();
 

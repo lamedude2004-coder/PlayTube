@@ -12,11 +12,11 @@ use Psr\Http\Message\StreamInterface;
 final class NoSeekStream implements StreamInterface
 {
     use StreamDecoratorTrait;
-    use NonSerializableStreamTrait;
 
-    private StreamInterface $stream;
+    /** @var StreamInterface */
+    private $stream;
 
-    public function seek(int $offset, int $whence = SEEK_SET): void
+    public function seek($offset, $whence = SEEK_SET): void
     {
         throw new \RuntimeException('Cannot seek a NoSeekStream');
     }

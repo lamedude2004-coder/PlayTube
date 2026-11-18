@@ -4,7 +4,6 @@ namespace Aws\Crypto;
 use GuzzleHttp\Psr7;
 use GuzzleHttp\Psr7\AppendStream;
 use GuzzleHttp\Psr7\Stream;
-use Psr\Http\Message\StreamInterface;
 
 trait EncryptionTrait
 {
@@ -50,7 +49,7 @@ trait EncryptionTrait
      * @internal
      */
     public function encrypt(
-        StreamInterface $plaintext,
+        Stream $plaintext,
         array $cipherOptions,
         MaterialsProvider $provider,
         MetadataEnvelope $envelope
@@ -138,12 +137,12 @@ trait EncryptionTrait
      * @param array $cipherOptions Options for use in determining the cipher to
      *                             be used for encrypting data.
      *
-     * @return array returns an array with two elements as follows: [string, AesStreamInterface]
+     * @return [AesStreamInterface, string]
      *
      * @internal
      */
     protected function getEncryptingStream(
-        StreamInterface $plaintext,
+        Stream $plaintext,
         $cek,
         &$cipherOptions
     ) {
@@ -157,7 +156,7 @@ trait EncryptionTrait
                     $cipherOptions['Iv'],
                     $cipherOptions['Aad'] = isset($cipherOptions['Aad'])
                         ? $cipherOptions['Aad']
-                        : '',
+                        : null,
                     $cipherOptions['TagLength'],
                     $cipherOptions['KeySize']
                 );

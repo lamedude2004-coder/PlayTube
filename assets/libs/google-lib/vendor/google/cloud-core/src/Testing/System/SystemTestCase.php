@@ -19,15 +19,13 @@ namespace Google\Cloud\Core\Testing\System;
 
 use Google\Cloud\BigQuery\BigQueryClient;
 use Google\Cloud\BigQuery\Dataset;
-use Google\Cloud\Core\Exception\BadRequestException;
-use Google\Cloud\Core\Exception\GoogleException;
 use Google\Cloud\Core\ExponentialBackoff;
 use Google\Cloud\PubSub\PubSubClient;
 use Google\Cloud\PubSub\Topic;
 use Google\Cloud\Storage\Bucket;
 use Google\Cloud\Storage\StorageClient;
 use Google\Cloud\Core\Testing\System\DeletionQueue;
-use PHPUnit\Framework\TestCase;
+use Yoast\PHPUnitPolyfills\TestCases\TestCase;
 
 /**
  * SystemTestCase can be extended to implement system tests
@@ -35,7 +33,7 @@ use PHPUnit\Framework\TestCase;
  * @experimental
  * @internal
  */
-abstract class SystemTestCase extends TestCase
+class SystemTestCase extends TestCase
 {
     protected static $deletionQueue;
 
@@ -76,7 +74,7 @@ abstract class SystemTestCase extends TestCase
      */
     public static function randId()
     {
-        return rand(1, 999999999);
+        return rand(1, 9999999);
     }
 
     /**
@@ -93,16 +91,14 @@ abstract class SystemTestCase extends TestCase
      * @param string $bucketName
      * @param array $options
      * @return Bucket
-     * @throws GoogleException
      *
      * @experimental
      * @internal
      */
     public static function createBucket(StorageClient $client, $bucketName, array $options = [])
     {
-        $backoff = new ExponentialBackoff(8, function ($ex) {
-            return !($ex instanceof BadRequestException);
-        });
+        $backoff = new ExponentialBackoff(8);
+
         $bucket = $backoff->execute(function () use ($client, $bucketName, $options) {
             return $client->createBucket($bucketName, $options);
         });
@@ -161,7 +157,6 @@ abstract class SystemTestCase extends TestCase
      * @param string $topicName
      * @param array $options
      * @return Topic
-     * @throws GoogleException
      *
      * @experimental
      * @internal

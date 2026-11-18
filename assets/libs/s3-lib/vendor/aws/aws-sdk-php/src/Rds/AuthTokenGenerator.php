@@ -14,6 +14,7 @@ use Aws;
  */
 class AuthTokenGenerator
 {
+
     private $credentialProvider;
 
     /**
@@ -46,7 +47,8 @@ class AuthTokenGenerator
     {
         if (!is_numeric($lifetime) || $lifetime > 15 || $lifetime <= 0) {
             throw new \InvalidArgumentException(
-                "Lifetime must be a positive number less than or equal to 15, was {$lifetime}"
+                "Lifetime must be a positive number less than or equal to 15, was {$lifetime}",
+                null
             );
         }
 

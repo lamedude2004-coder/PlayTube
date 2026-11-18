@@ -11,20 +11,11 @@ class HashingStream implements StreamInterface
 {
     use StreamDecoratorTrait;
 
-    /** @var StreamInterface */
-    private $stream;
-
     /** @var HashInterface */
     private $hash;
 
     /** @var callable|null */
     private $callback;
-
-    /** @var bool */
-    private $complete = false;
-
-    /** @var \Throwable|null */
-    private $completionException;
 
     /**
      * @param StreamInterface $stream     Stream that is being read.
@@ -35,51 +26,35 @@ class HashingStream implements StreamInterface
     public function __construct(
         StreamInterface $stream,
         HashInterface $hash,
-        ?callable $onComplete = null
+        callable $onComplete = null
     ) {
         $this->stream = $stream;
         $this->hash = $hash;
         $this->callback = $onComplete;
     }
 
-    public function read($length): string
+    public function read($length)
     {
-        if ($this->completionException !== null) {
-            throw $this->completionException;
-        }
-
         $data = $this->stream->read($length);
-
-        if (!$this->complete) {
-            $this->hash->update($data);
-        }
-
-        if (!$this->complete && $this->eof()) {
-            $this->complete = true;
-            try {
-                $result = $this->hash->complete();
-                if ($this->callback) {
-                    call_user_func($this->callback, $result);
-                }
-            } catch (\Throwable $e) {
-                $this->completionException = $e;
-                throw $e;
+        $this->hash->update($data);
+        if ($this->eof()) {
+            $result = $this->hash->complete();
+            if ($this->callback) {
+                call_user_func($this->callback, $result);
             }
         }
 
         return $data;
     }
 
-    public function seek($offset, $whence = SEEK_SET): void
+    public function seek($offset, $whence = SEEK_SET)
     {
-        // Seeking arbitrarily is not supported.
-        if ($offset !== 0) {
-            return;
+        if ($offset === 0) {
+            $this->hash->reset();
+            return $this->stream->seek($offset);
         }
 
-        $this->stream->seek($offset);
-        $this->hash->reset();
-        $this->complete = false;
-        $this->completionException = null;
+        // Seeking arbitrarily is not supported.
+        return false;
     }
 }

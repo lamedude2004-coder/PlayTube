@@ -85,12 +85,11 @@ class DeletionQueue
      * Process all items in the deletion queue.
      *
      * @return void
-     * @throws ApiException
      *
      * @experimental
      * @internal
      */
-    public function process(?callable $action = null)
+    public function process(callable $action = null)
     {
         if ($action) {
             $action($this->queue);

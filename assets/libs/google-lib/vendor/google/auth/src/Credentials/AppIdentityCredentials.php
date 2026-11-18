@@ -28,6 +28,8 @@ use Google\Auth\ProjectIdProviderInterface;
 use Google\Auth\SignBlobInterface;
 
 /**
+ * @deprecated
+ *
  * AppIdentityCredentials supports authorization on Google App Engine.
  *
  * It can be used to authorize requests using the AuthTokenMiddleware or
@@ -53,7 +55,6 @@ use Google\Auth\SignBlobInterface;
  *
  * $res = $client->get('volumes?q=Henry+David+Thoreau&country=US');
  * ```
- * @deprecated
  */
 class AppIdentityCredentials extends CredentialsLoader implements
     SignBlobInterface,
@@ -115,7 +116,7 @@ class AppIdentityCredentials extends CredentialsLoader implements
      * As the AppIdentityService uses protobufs to fetch the access token,
      * the GuzzleHttp\ClientInterface instance passed in will not be used.
      *
-     * @param callable|null $httpHandler callback which delivers psr7 request
+     * @param callable $httpHandler callback which delivers psr7 request
      * @return array<mixed> {
      *     A set of auth related metadata, containing the following
      *
@@ -123,7 +124,7 @@ class AppIdentityCredentials extends CredentialsLoader implements
      *     @type string $expiration_time
      * }
      */
-    public function fetchAuthToken(?callable $httpHandler = null)
+    public function fetchAuthToken(callable $httpHandler = null)
     {
         try {
             $this->checkAppEngineContext();
@@ -160,10 +161,10 @@ class AppIdentityCredentials extends CredentialsLoader implements
      *
      * Returns null if AppIdentityService is unavailable.
      *
-     * @param callable|null $httpHandler Not used by this type.
+     * @param callable $httpHandler Not used by this type.
      * @return string|null
      */
-    public function getProjectId(?callable $httpHandler = null)
+    public function getProjectId(callable $httpHandler = null)
     {
         try {
             $this->checkAppEngineContext();
@@ -180,11 +181,11 @@ class AppIdentityCredentials extends CredentialsLoader implements
      *
      * Subsequent calls to this method will return a cached value.
      *
-     * @param callable|null $httpHandler Not used in this implementation.
+     * @param callable $httpHandler Not used in this implementation.
      * @return string
      * @throws \Exception If AppEngine SDK or mock is not available.
      */
-    public function getClientName(?callable $httpHandler = null)
+    public function getClientName(callable $httpHandler = null)
     {
         $this->checkAppEngineContext();
 

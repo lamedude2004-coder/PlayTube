@@ -52,19 +52,19 @@ class DecodingEventStreamIterator implements Iterator
     ];
 
     /** @var StreamInterface Stream of eventstream shape to parse. */
-    protected $stream;
+    private $stream;
 
     /** @var array Currently parsed event. */
-    protected $currentEvent;
+    private $currentEvent;
 
     /** @var int Current in-order event key. */
-    protected $key;
+    private $key;
 
     /** @var resource|\HashContext CRC32 hash context for event validation */
-    protected $hashContext;
+    private $hashContext;
 
     /** @var int $currentPosition */
-    protected $currentPosition;
+    private $currentPosition;
 
     /**
      * DecodingEventStreamIterator constructor.
@@ -77,7 +77,7 @@ class DecodingEventStreamIterator implements Iterator
         $this->rewind();
     }
 
-    protected function parseHeaders($headerBytes)
+    private function parseHeaders($headerBytes)
     {
         $headers = [];
         $bytesRead = 0;
@@ -102,7 +102,7 @@ class DecodingEventStreamIterator implements Iterator
         return [$headers, $bytesRead];
     }
 
-    protected function parsePrelude()
+    private function parsePrelude()
     {
         $prelude = [];
         $bytesRead = 0;
@@ -127,12 +127,7 @@ class DecodingEventStreamIterator implements Iterator
         return [$prelude, $bytesRead];
     }
 
-    /**
-     * This method decodes an event from the stream.
-     *
-     * @return array
-     */
-    protected function parseEvent()
+    private function parseEvent()
     {
         $event = [];
 
@@ -192,9 +187,6 @@ class DecodingEventStreamIterator implements Iterator
         return $this->key;
     }
 
-    /**
-     * @return void
-     */
     #[\ReturnTypeWillChange]
     public function next()
     {
@@ -205,9 +197,6 @@ class DecodingEventStreamIterator implements Iterator
         }
     }
 
-    /**
-     * @return void
-     */
     #[\ReturnTypeWillChange]
     public function rewind()
     {
@@ -228,7 +217,7 @@ class DecodingEventStreamIterator implements Iterator
 
     // Decoding Utilities
 
-    protected function readAndHashBytes($num)
+    private function readAndHashBytes($num)
     {
         $bytes = $this->stream->read($num);
         hash_update($this->hashContext, $bytes);
@@ -248,7 +237,7 @@ class DecodingEventStreamIterator implements Iterator
     private function uintToInt($val, $size)
     {
         $signedCap = pow(2, $size - 1);
-        if ($size < 64 && $val >= $signedCap) {
+        if ($val > $signedCap) {
             $val -= (2 * $signedCap);
         }
         return $val;
@@ -300,6 +289,10 @@ class DecodingEventStreamIterator implements Iterator
 
     private function unpackInt64($bytes)
     {
+        if (version_compare(PHP_VERSION, '5.6.3', '<')) {
+            $d = unpack('N2', $bytes);
+            return [1 => $d[1] << 32 | $d[2]];
+        }
         return unpack('J', $bytes);
     }
 
@@ -327,7 +320,7 @@ class DecodingEventStreamIterator implements Iterator
     {
         list($val, $bytes) = $this->decodeInt64();
         return [
-            DateTimeResult::createFromFormat('U.u', sprintf('%.6F', $val / 1000)),
+            DateTimeResult::createFromFormat('U.u', $val / 1000),
             $bytes
         ];
     }

@@ -6,14 +6,11 @@ namespace GuzzleHttp\Psr7;
 
 final class Header
 {
-    private function __construct()
-    {
-    }
-
     /**
-     * Parses semicolon-separated header parameters into associative arrays, one
-     * per comma-separated header value. Parameters without a value are appended
-     * as values under integer keys.
+     * Parse an array of header values containing ";" separated data into an
+     * array of associative arrays representing the header key value pair data
+     * of the header. When a parameter does not contain a value, but just
+     * contains a key, this function will inject a key with a '' string value.
      *
      * @param string|array $header Header to parse into components.
      */
@@ -25,18 +22,13 @@ final class Header
         foreach ((array) $header as $value) {
             foreach (self::splitList($value) as $val) {
                 $part = [];
-                foreach (self::splitParameters($val) as $kvp) {
-                    $count = preg_match('/^=*(<[^>]+>|[^=]+)=*(.*)$/Ds', $kvp, $matches);
-
-                    if ($count === false) {
-                        throw new \RuntimeException('Unable to parse header parameters: '.preg_last_error_msg());
-                    }
-
-                    if ($count !== 0) {
-                        if ($matches[2] !== '') {
-                            $part[trim($matches[1], $trimmed)] = trim($matches[2], $trimmed);
+                foreach (preg_split('/;(?=([^"]*"[^"]*")*[^"]*$)/', $val) as $kvp) {
+                    if (preg_match_all('/<[^>]+>|[^=]+/', $kvp, $matches)) {
+                        $m = $matches[0];
+                        if (isset($m[1])) {
+                            $part[trim($m[0], $trimmed)] = trim($m[1], $trimmed);
                         } else {
-                            $part[] = trim($matches[1], $trimmed);
+                            $part[] = trim($m[0], $trimmed);
                         }
                     }
                 }
@@ -50,60 +42,35 @@ final class Header
     }
 
     /**
-     * Split a header value into semicolon-separated parameters.
+     * Converts an array of header values that may contain comma separated
+     * headers into an array of headers with no comma separated values.
      *
-     * @return string[]
+     * @param string|array $header Header to normalize.
+     *
+     * @deprecated Use self::splitList() instead.
      */
-    private static function splitParameters(string $value): array
+    public static function normalize($header): array
     {
-        $values = [];
-        $start = 0;
-        $isQuoted = false;
-        $isEscaped = false;
-
-        for ($i = 0, $max = \strlen($value); $i < $max; ++$i) {
-            $char = $value[$i];
-
-            if ($isEscaped) {
-                $isEscaped = false;
-
-                continue;
-            }
-
-            if ($isQuoted && $char === '\\') {
-                $isEscaped = true;
-
-                continue;
-            }
-
-            if ($char === '"') {
-                $isQuoted = !$isQuoted;
-
-                continue;
-            }
-
-            if (!$isQuoted && $char === ';') {
-                $values[] = \substr($value, $start, $i - $start);
-                $start = $i + 1;
+        $result = [];
+        foreach ((array) $header as $value) {
+            foreach (self::splitList($value) as $parsed) {
+                $result[] = $parsed;
             }
         }
 
-        $values[] = \substr($value, $start);
-
-        return $values;
+        return $result;
     }
 
     /**
-     * Splits an HTTP header defined to contain a comma-separated list into each
-     * individual value. Empty values are removed.
+     * Splits a HTTP header defined to contain a comma-separated list into
+     * each individual value. Empty values will be removed.
      *
-     * Example headers include `accept`, `cache-control`, and `if-none-match`.
+     * Example headers include 'accept', 'cache-control' and 'if-none-match'.
      *
-     * This method must not be used to parse headers that are not defined as a
-     * list, such as `user-agent` or `set-cookie`.
+     * This method must not be used to parse headers that are not defined as
+     * a list, such as 'user-agent' or 'set-cookie'.
      *
-     * @param string|string[] $values Header value as returned by
-     *                                MessageInterface::getHeader()
+     * @param string|string[] $values Header value as returned by MessageInterface::getHeader()
      *
      * @return string[]
      */
@@ -131,7 +98,7 @@ final class Header
                 }
 
                 if (!$isQuoted && $value[$i] === ',') {
-                    $v = \trim($v, " \t\n\r");
+                    $v = \trim($v);
                     if ($v !== '') {
                         $result[] = $v;
                     }
@@ -156,7 +123,7 @@ final class Header
                 $v .= $value[$i];
             }
 
-            $v = \trim($v, " \t\n\r");
+            $v = \trim($v);
             if ($v !== '') {
                 $result[] = $v;
             }

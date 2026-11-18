@@ -16,32 +16,21 @@
  */
 namespace Google\Cloud\Core\Logger;
 
-use Monolog\LogRecord;
-
 /**
  * Shared trait to enrich and format a record with
  * App Engine Flex specific information.
  */
 trait FormatterTrait
 {
-    /**
-     * @param array|LogRecord $record
-     * @param string $message
-     * @return string
-     */
-    protected function formatPayload($record, $message)
+    protected function formatPayload(array $record, $message)
     {
-        if ($record instanceof LogRecord) {
-            $record = $record->toArray();
-        }
-
         list($usec, $sec) = explode(' ', microtime());
-        $usec = (int) (((float) $usec) * 1000000000);
-        $sec = (int) $sec;
+        $usec = (int)(((float)$usec)*1000000000);
+        $sec = (int)$sec;
 
         $payload = [
             'message' => $message,
-            'timestamp' => ['seconds' => $sec, 'nanos' => $usec],
+            'timestamp'=> ['seconds' => $sec, 'nanos' => $usec],
             'thread' => '',
             'severity' => $record['level_name'],
         ];

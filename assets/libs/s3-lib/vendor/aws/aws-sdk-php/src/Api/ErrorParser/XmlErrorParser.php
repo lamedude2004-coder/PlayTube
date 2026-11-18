@@ -1,7 +1,6 @@
 <?php
 namespace Aws\Api\ErrorParser;
 
-use Aws\Api\Parser\AbstractParser;
 use Aws\Api\Parser\PayloadParserTrait;
 use Aws\Api\Parser\XmlParser;
 use Aws\Api\Service;
@@ -18,7 +17,7 @@ class XmlErrorParser extends AbstractErrorParser
 
     protected $parser;
 
-    public function __construct(?Service $api = null, ?XmlParser $parser = null)
+    public function __construct(Service $api = null, XmlParser $parser = null)
     {
         parent::__construct($api);
         $this->parser = $parser ?: new XmlParser();
@@ -26,9 +25,8 @@ class XmlErrorParser extends AbstractErrorParser
 
     public function __invoke(
         ResponseInterface $response,
-        ?CommandInterface $command = null
+        CommandInterface $command = null
     ) {
-        $response = AbstractParser::getResponseWithCachingStream($response);
         $code = (string) $response->getStatusCode();
 
         $data = [
@@ -39,9 +37,9 @@ class XmlErrorParser extends AbstractErrorParser
             'parsed' => null
         ];
 
-        $rawBody = AbstractParser::getBodyContents($response);
-        if (!empty($rawBody)) {
-            $this->parseBody($this->parseXml($rawBody, $response), $data);
+        $body = $response->getBody();
+        if ($body->getSize() > 0) {
+            $this->parseBody($this->parseXml($body, $response), $data);
         } else {
             $this->parseHeaders($response, $data);
         }
@@ -102,20 +100,12 @@ class XmlErrorParser extends AbstractErrorParser
         ResponseInterface $response,
         StructureShape $member
     ) {
-        $rawBody = AbstractParser::getBodyContents($response);
-
-        if (empty($rawBody)) {
-            return $rawBody;
-        }
-
-        $xmlBody = $this->parseXml($rawBody, $response);
+        $xmlBody = $this->parseXml($response->getBody(), $response);
         $prefix = $this->registerNamespacePrefix($xmlBody);
         $errorBody = $xmlBody->xpath("//{$prefix}Error");
 
         if (is_array($errorBody) && !empty($errorBody[0])) {
             return $this->parser->parse($member, $errorBody[0]);
         }
-
-        return $rawBody;
     }
 }

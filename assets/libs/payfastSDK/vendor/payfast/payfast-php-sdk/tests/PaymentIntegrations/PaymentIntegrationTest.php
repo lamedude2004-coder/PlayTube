@@ -1,8 +1,5 @@
 <?php
-
 declare(strict_types=1);
-
-namespace PaymentIntegrations;
 
 use PayFast\Exceptions\InvalidRequestException;
 use PayFast\PayFastPayment;
@@ -10,10 +7,21 @@ use PHPUnit\Framework\TestCase;
 
 final class PaymentIntegrationTest extends TestCase
 {
+
     private $init;
 
+    protected function setUp(): void
+    {
+        $this->init = [
+            'merchantId' => '10000100',
+            'merchantKey' => '46f0cd694581a',
+            'passPhrase' => '',
+            'testMode' => true
+        ];
+    }
+
     /**
-     * Test instantiation of Payfast payment
+     * Test instantiation of PayFast payment
      */
     public function testInstantiationOfPayFastPayment()
     {
@@ -34,13 +42,5 @@ final class PaymentIntegrationTest extends TestCase
         new PayFastPayment($this->init);
     }
 
-    protected function setUp(): void
-    {
-        $this->init = [
-            'merchantId'  => '10000100',
-            'merchantKey' => '46f0cd694581a',
-            'passPhrase'  => '',
-            'testMode'    => true
-        ];
-    }
+
 }

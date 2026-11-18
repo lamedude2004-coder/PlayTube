@@ -47,7 +47,7 @@ class ReadStream implements StreamInterface
      *
      * @return int The size of the stream.
      */
-    public function getSize(): ?int
+    public function getSize()
     {
         return $this->stream->getSize() ?: $this->getSizeFromMetadata();
     }
@@ -58,16 +58,10 @@ class ReadStream implements StreamInterface
      *
      * @return int The Size of the stream
      */
-    private function getSizeFromMetadata(): int
+    private function getSizeFromMetadata()
     {
-        $metadata = $this->stream->getMetadata('wrapper_data');
-
-        if (is_null($metadata)) {
-            return 0;
-        }
-
-        foreach ($metadata as $value) {
-            if (substr($value, 0, 15) == 'Content-Length:') {
+        foreach ($this->stream->getMetadata('wrapper_data') as $value) {
+            if (substr($value, 0, 15) == "Content-Length:") {
                 return (int) substr($value, 16);
             }
         }
@@ -84,7 +78,7 @@ class ReadStream implements StreamInterface
      * @param  int $length The number of bytes to read.
      * @return string Read bytes from the underlying stream.
      */
-    public function read($length): string
+    public function read($length)
     {
         $data = '';
         do {

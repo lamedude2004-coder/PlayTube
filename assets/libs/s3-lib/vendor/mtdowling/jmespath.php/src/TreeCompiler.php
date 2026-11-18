@@ -9,7 +9,6 @@ class TreeCompiler
     private $indentation;
     private $source;
     private $vars;
-    private $scope;
 
     /**
      * @param array  $ast    AST to compile.
@@ -20,7 +19,7 @@ class TreeCompiler
      */
     public function visit(array $ast, $fnName, $expr)
     {
-        $this->vars = $this->scope = [];
+        $this->vars = [];
         $this->source = $this->indentation = '';
         $this->write("<?php\n")
             ->write('use JmesPath\\TreeInterpreter as Ti;')
@@ -108,7 +107,7 @@ class TreeCompiler
         return $this
             ->write('%s = $value;', $a)
             ->dispatch($node['children'][0])
-            ->write('if (!Utils::isTruthy($value)) {')
+            ->write('if (!$value && $value !== "0" && $value !== 0) {')
                 ->indent()
                 ->write('$value = %s;', $a)
                 ->dispatch($node['children'][1])
@@ -122,7 +121,7 @@ class TreeCompiler
         return $this
             ->write('%s = $value;', $a)
             ->dispatch($node['children'][0])
-            ->write('if (Utils::isTruthy($value)) {')
+            ->write('if ($value || $value === "0" || $value === 0) {')
                 ->indent()
                 ->write('$value = %s;', $a)
                 ->dispatch($node['children'][1])
@@ -143,7 +142,11 @@ class TreeCompiler
     {
         return $this
             ->dispatch($node['children'][0])
-            ->dispatch($node['children'][1]);
+            ->write('if ($value !== null) {')
+                ->indent()
+                ->dispatch($node['children'][1])
+                ->outdent()
+            ->write('}');
     }
 
     private function visit_field(array $node)
@@ -204,29 +207,6 @@ class TreeCompiler
             ->dispatch($node['children'][1]);
     }
 
-    private function visit_let(array $node)
-    {
-        $value = $this->makeVar('beforeLet');
-        $scope = $this->scope;
-        $bound = [];
-        $this->write('%s = $value;', $value);
-
-        foreach ($node['children'][0]['children'] as $binding) {
-            $var = $this->makeVar('let');
-            $this->dispatch($binding['children'][0])
-                ->write('%s = $value;', $var)
-                ->write('$value = %s;', $value);
-            $bound[$binding['value']] = $var;
-        }
-
-        // Bindings are only visible to the body, not to each other.
-        $this->scope = $bound + $scope;
-        $this->dispatch($node['children'][1]);
-        $this->scope = $scope;
-
-        return $this;
-    }
-
     private function visit_multi_select_list(array $node)
     {
         return $this->visit_multi_select_hash($node);
@@ -277,8 +257,8 @@ class TreeCompiler
         }
 
         return $this->write(
-            '$value = Fd::getInstance()->__invoke(%s, %s);',
-            var_export($node['value'], true), $args
+            '$value = Fd::getInstance()->__invoke("%s", %s);',
+            $node['value'], $args
         );
     }
 
@@ -298,36 +278,12 @@ class TreeCompiler
         return $this->write('// Visiting current node (no-op)');
     }
 
-    private function visit_variable(array $node)
-    {
-        if (isset($this->scope[$node['value']])) {
-            return $this->write('$value = %s;', $this->scope[$node['value']]);
-        }
-
-        return $this->write(
-            'throw new \\RuntimeException(%s);',
-            var_export('Undefined variable: $' . $node['value'], true)
-        );
-    }
-
     private function visit_expref(array $node)
     {
         $child = var_export($node['children'][0], true);
-        $interpreter = '$interpreter';
-
-        if ($this->scope) {
-            $bindings = [];
-            foreach ($this->scope as $name => $var) {
-                $bindings[] = var_export($name, true) . ' => ' . $var;
-            }
-            $scoped = $this->makeVar('scoped');
-            $this->write('%s = $interpreter->withScope([%s]);', $scoped, implode(', ', $bindings));
-            $interpreter = $scoped;
-        }
-
-        return $this->write('$value = function ($value) use (%s) {', $interpreter)
+        return $this->write('$value = function ($value) use ($interpreter) {')
             ->indent()
-            ->write('return %s->visit(%s, $value);', $interpreter, $child)
+            ->write('return $interpreter->visit(%s, $value);', $child)
             ->outdent()
         ->write('};');
     }
@@ -349,7 +305,7 @@ class TreeCompiler
                 ->write('%s = [];', $merged)
                 ->write('foreach ($value as %s) {', $val)
                     ->indent()
-                    ->write('if (is_array(%s) && array_key_exists(0, %s)) {', $val, $val)
+                    ->write('if (is_array(%s) && isset(%s[0])) {', $val, $val)
                         ->indent()
                         ->write('%s = array_merge(%s, %s);', $merged, $merged, $val)
                         ->outdent()
@@ -376,7 +332,7 @@ class TreeCompiler
             ->write('');
 
         if (!isset($node['from'])) {
-            $this->write('if (!is_array($value) && !($value instanceof \stdClass)) { $value = null; }');
+            $this->write('if (!is_array($value) || !($value instanceof \stdClass)) { $value = null; }');
         } elseif ($node['from'] == 'object') {
             $this->write('if (!Utils::isObject($value)) { $value = null; }');
         } elseif ($node['from'] == 'array') {
@@ -445,7 +401,7 @@ class TreeCompiler
             $this->write('$value = !Utils::isEqual(%s, %s);', $a, $b);
         } else {
             $this->write(
-                '$value = (is_int(%s) || is_float(%s)) && (is_int(%s) || is_float(%s)) ? %s %s %s : null;',
+                '$value = (is_int(%s) || is_float(%s)) && (is_int(%s) || is_float(%s)) && %s %s %s;',
                 $a, $a, $b, $b, $a, $node['value'], $b
             );
         }

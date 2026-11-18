@@ -18,17 +18,19 @@
 
 namespace Google\Cloud\Core;
 
-use Google\ApiCore\InsecureCredentialsWrapper as ApiCoreInsecureCredentialsWrapper;
+use Google\ApiCore\CredentialsWrapper;
 
 /**
  * For connect to emulator.
- *
- * This class is deprecated. Use Google\ApiCore\InsecureCredentialsWrapper instead.
- * @deprecated
  */
-class InsecureCredentialsWrapper extends ApiCoreInsecureCredentialsWrapper
+class InsecureCredentialsWrapper extends CredentialsWrapper
 {
     public function __construct()
     {
+    }
+
+    public function getAuthorizationHeaderCallback($audience = null)
+    {
+        return null;
     }
 }

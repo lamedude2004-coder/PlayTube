@@ -17,8 +17,6 @@
 
 namespace Google\Cloud\Core\Report;
 
-use Google\Cloud\Core\Compute\Metadata;
-
 /**
  * Utility class for MetadataProvider.
  */
@@ -30,19 +28,13 @@ class MetadataProviderUtils
      * @param array $server Normally pass the $_SERVER.
      * @return MetadataProviderInterface
      */
-    public static function autoSelect($server, ?Metadata $metadata = null)
+    public static function autoSelect($server)
     {
         if (isset($server['GAE_SERVICE'])) {
             if (isset($server['GAE_ENV']) && $server['GAE_ENV'] === 'standard') {
                 return new GAEStandardMetadataProvider($server);
             }
             return new GAEFlexMetadataProvider($server);
-        }
-        if (!empty(\getenv('K_CONFIGURATION'))) {
-            return new CloudRunServiceMetadataProvider(\getenv(), $metadata);
-        }
-        if (!empty(\getenv('CLOUD_RUN_JOB'))) {
-            return new CloudRunJobMetadataProvider(\getenv(), $metadata);
         }
         return new EmptyMetadataProvider();
     }

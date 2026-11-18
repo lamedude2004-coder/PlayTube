@@ -22,7 +22,7 @@ class Utils
     public static function isTruthy($value)
     {
         if (!$value) {
-            return $value === 0 || $value === 0.0 || $value === '0';
+            return $value === 0 || $value === '0';
         } elseif ($value instanceof \stdClass) {
             return (bool) get_object_vars($value);
         } else {
@@ -46,7 +46,8 @@ class Utils
             if (empty($arg)) {
                 return 'array';
             }
-            return self::firstKey($arg) === 0 ? 'array' : 'object';
+            reset($arg);
+            return key($arg) === 0 ? 'array' : 'object';
         } elseif ($arg instanceof \stdClass) {
             return 'object';
         } elseif ($arg instanceof \Closure) {
@@ -57,18 +58,12 @@ class Utils
             return count($arg) == 0 || $arg->offsetExists(0)
                 ? 'array'
                 : 'object';
-        } elseif (is_object($arg)) {
-            if (method_exists($arg, '__toString')) {
-                return 'string';
-            }
-
-            throw new \InvalidArgumentException(
-                'Unable to determine JMESPath type from ' . get_class($arg)
-            );
+        } elseif (method_exists($arg, '__toString')) {
+            return 'string';
         }
 
         throw new \InvalidArgumentException(
-            'Unable to determine JMESPath type from ' . gettype($arg)
+            'Unable to determine JMESPath type from ' . get_class($arg)
         );
     }
 
@@ -82,7 +77,7 @@ class Utils
     public static function isObject($value)
     {
         if (is_array($value)) {
-            return !$value || self::firstKey($value) !== 0;
+            return !$value || array_keys($value)[0] !== 0;
         }
 
         // Handle array-like values. Must be empty or offset 0 does not exist
@@ -101,7 +96,7 @@ class Utils
     public static function isArray($value)
     {
         if (is_array($value)) {
-            return !$value || self::firstKey($value) === 0;
+            return !$value || array_keys($value)[0] === 0;
         }
 
         // Handle array-like values. Must be empty or offset 0 exists.
@@ -110,20 +105,8 @@ class Utils
             : false;
     }
 
-    private static function firstKey(array $array)
-    {
-        foreach ($array as $key => $value) {
-            return $key;
-        }
-
-        return null;
-    }
-
     /**
-     * JSON-semantic equality: one number type, structural comparison for arrays
-     * and objects, and no object key-order sensitivity.
-     * Empty arrays and empty objects compare equal because PHP cannot represent
-     * that distinction after associative JSON decoding.
+     * JSON aware value comparison function.
      *
      * @param mixed $a First value to compare
      * @param mixed $b Second value to compare
@@ -132,38 +115,15 @@ class Utils
      */
     public static function isEqual($a, $b)
     {
-        $typeA = self::type($a);
-        $typeB = self::type($b);
-
-        if ($typeA !== $typeB) {
-            return ($typeA === 'array' || $typeA === 'object')
-                && ($typeB === 'array' || $typeB === 'object')
-                && (array) $a === []
-                && (array) $b === [];
-        }
-
-        if ($typeA === 'number') {
-            return $a == $b;
-        }
-
-        if ($typeA === 'array' || $typeA === 'object') {
-            $a = (array) $a;
-            $b = (array) $b;
-
-            if (count($a) !== count($b)) {
-                return false;
-            }
-
-            foreach ($a as $key => $value) {
-                if (!array_key_exists($key, $b) || !self::isEqual($value, $b[$key])) {
-                    return false;
-                }
-            }
-
+        if ($a === $b) {
             return true;
+        } elseif ($a instanceof \stdClass) {
+            return self::isEqual((array) $a, $b);
+        } elseif ($b instanceof \stdClass) {
+            return self::isEqual($a, (array) $b);
+        } else {
+            return false;
         }
-
-        return $a === $b;
     }
 
     /**
@@ -200,7 +160,7 @@ class Utils
      * @param callable $sortFn Callable used to sort values
      *
      * @return array Returns the sorted array
-     * @link https://en.wikipedia.org/wiki/Schwartzian_transform
+     * @link http://en.wikipedia.org/wiki/Schwartzian_transform
      */
     public static function stableSort(array $data, callable $sortFn)
     {
@@ -232,7 +192,7 @@ class Utils
      */
     public static function slice($value, $start = null, $stop = null, $step = 1)
     {
-        if (!is_string($value) && !self::isArray($value)) {
+        if (!is_array($value) && !is_string($value)) {
             throw new \InvalidArgumentException('Expects string or array');
         }
 
@@ -279,10 +239,7 @@ class Utils
     private static function sliceIndices($subject, $start, $stop, $step)
     {
         $type = gettype($subject);
-        if ($type == 'string') {
-            $subject = mb_str_split($subject, 1, 'UTF-8');
-        }
-        $len = count($subject);
+        $len = $type == 'string' ? mb_strlen($subject, 'UTF-8') : count($subject);
         list($start, $stop, $step) = self::adjustSlice($len, $start, $stop, $step);
 
         $result = [];

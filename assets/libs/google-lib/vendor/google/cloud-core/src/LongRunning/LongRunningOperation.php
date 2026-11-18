@@ -19,7 +19,6 @@ namespace Google\Cloud\Core\LongRunning;
 
 /**
  * Represent and interact with a Long Running Operation.
- * @template T
  */
 class LongRunningOperation
 {
@@ -31,7 +30,6 @@ class LongRunningOperation
 
     /**
      * @var LongRunningConnectionInterface
-     * @internal
      */
     private $connection;
 
@@ -63,8 +61,6 @@ class LongRunningOperation
     /**
      * @param LongRunningConnectionInterface $connection An implementation
      *        mapping to methods which handle LRO resolution in the service.
-     *        This object is created by internal classes,
-     *        and should not be instantiated outside of this context.
      * @param string $name The Operation name.
      * @param array $callablesMap An collection of form [(string) typeUrl, (callable) callable]
      *        providing a function to invoke when an operation completes. The
@@ -181,7 +177,7 @@ class LongRunningOperation
      * ```
      *
      * @param array $options [optional] Configuration options.
-     * @return T|mixed|null
+     * @return mixed|null
      */
     public function result(array $options = [])
     {
@@ -253,11 +249,12 @@ class LongRunningOperation
 
         $this->result = null;
         $this->error = null;
-
-        if ($res['done'] ?? false && isset($res['metadata']['typeUrl'])) {
+        if (isset($res['done']) && $res['done']) {
             $type = $res['metadata']['typeUrl'];
             $this->result = $this->executeDoneCallback($type, $res['response']);
-            $this->error = $res['error'] ?? null;
+            $this->error = (isset($res['error']))
+                ? $res['error']
+                : null;
         }
 
         return $this->info = $res;

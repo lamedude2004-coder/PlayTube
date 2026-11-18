@@ -7,7 +7,7 @@
  * and seeds the site settings and first admin account here.
  */
 
-$host = getenv('DB_HOST') ?: '127.0.0.1';
+$host = getenv('DB_HOST') ?: 'localhost';
 $port = (int) (getenv('DB_PORT') ?: 3306);
 $name = getenv('DB_NAME') ?: 'playtube';
 $user = getenv('DB_USER') ?: 'playtube';

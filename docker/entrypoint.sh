@@ -13,7 +13,7 @@ PASS_FILE="$DATA_DIR/.appjet_db_password"
 
 log() { printf '[playtube] %s\n' "$*"; }
 
-mkdir -p /run/mysqld /var/lib/nginx/tmp "$APP_ROOT/upload"
+mkdir -p /run/mysqld /var/lib/nginx/tmp /var/lib/nginx/logs "$APP_ROOT/upload"
 
 # ---------------------------------------------------------------- DB password
 if [ -n "${DB_PASSWORD:-}" ]; then
@@ -40,7 +40,7 @@ fi
 
 log "starting MariaDB"
 mariadbd --user="$(id -un)" --datadir="$DATA_DIR" --socket="$SOCK" --bind-address=127.0.0.1 --port=3306 \
-         --skip-name-resolve --skip-log-bin --innodb-buffer-pool-size=128M &
+         --skip-networking=0 --skip-name-resolve --skip-log-bin --innodb-buffer-pool-size=128M &
 DB_PID=$!
 FPM_PID=""
 
@@ -89,7 +89,7 @@ log "writing config.php"
 cat > "$APP_ROOT/config.php" <<PHP
 <?php
 // Generated on container start by the AppJet deployment bootstrap.
-\$sql_db_host = "127.0.0.1";
+\$sql_db_host = "localhost";
 \$sql_db_user = "$DB_USER";
 \$sql_db_pass = "$DB_PASS";
 \$sql_db_name = "$DB_NAME";
@@ -109,7 +109,7 @@ PHP
 
 # ------------------------------------------------------------- site + account
 log "seeding site configuration"
-DB_HOST=127.0.0.1 DB_PORT=3306 DB_NAME="$DB_NAME" DB_USER="$DB_USER" DB_PASS="$DB_PASS" \
+DB_HOST=localhost DB_PORT=3306 DB_NAME="$DB_NAME" DB_USER="$DB_USER" DB_PASS="$DB_PASS" \
 SITE_NAME="${SITE_NAME:-PlayTube}" \
 SITE_TITLE="${SITE_TITLE:-PlayTube - Video Sharing Platform}" \
 SITE_EMAIL="${SITE_EMAIL:-admin@example.com}" \

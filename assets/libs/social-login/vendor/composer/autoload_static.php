@@ -7,14 +7,14 @@ namespace Composer\Autoload;
 class ComposerStaticInit561ea6bf7d972f975a4f49f4d5a61084
 {
     public static $prefixLengthsPsr4 = array (
-        'H' => 
+        'H' =>
         array (
             'Hybridauth\\' => 11,
         ),
     );
 
     public static $prefixDirsPsr4 = array (
-        'Hybridauth\\' => 
+        'Hybridauth\\' =>
         array (
             0 => __DIR__ . '/..' . '/hybridauth/hybridauth/src',
         ),

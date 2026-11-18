@@ -1,5 +1,5 @@
 {
     "require" : {
-        "hybridauth/hybridauth" : "3.8.2"
+        "hybridauth/hybridauth" : "^3.13.0"
     }
 }

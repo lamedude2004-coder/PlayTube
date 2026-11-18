@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => '__root__',
-        'pretty_version' => '1.0.0+no-version-set',
-        'version' => '1.0.0.0',
-        'reference' => NULL,
+        'pretty_version' => 'dev-appjet',
+        'version' => 'dev-appjet',
+        'reference' => '4e871d459a51ba714af26c7b02164ece5676ef9f',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -11,18 +11,18 @@
     ),
     'versions' => array(
         '__root__' => array(
-            'pretty_version' => '1.0.0+no-version-set',
-            'version' => '1.0.0.0',
-            'reference' => NULL,
+            'pretty_version' => 'dev-appjet',
+            'version' => 'dev-appjet',
+            'reference' => '4e871d459a51ba714af26c7b02164ece5676ef9f',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
             'dev_requirement' => false,
         ),
         'hybridauth/hybridauth' => array(
-            'pretty_version' => 'v3.8.2',
-            'version' => '3.8.2.0',
-            'reference' => '0d6e31482c544e5ed2bdc83bd3c033054129c482',
+            'pretty_version' => 'v3.13.0',
+            'version' => '3.13.0.0',
+            'reference' => '5f799ed5fd35e21f06cf42310f9f6ed3f7bbe7df',
             'type' => 'library',
             'install_path' => __DIR__ . '/../hybridauth/hybridauth',
             'aliases' => array(),

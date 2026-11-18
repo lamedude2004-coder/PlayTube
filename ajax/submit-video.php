@@ -5,13 +5,6 @@ if (IS_LOGGED == false || $pt->config->upload_system != 'on') {
     echo json_encode($data);
     exit();
 }
-// TEMP DIAGNOSTIC: report any fatal to the container log so the cause is visible.
-register_shutdown_function(function () {
-    $e = error_get_last();
-    if ($e && in_array($e['type'], array(E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR), true)) {
-        error_log('[playtube-diag] submit fatal: ' . $e['message'] . ' in ' . $e['file'] . ':' . $e['line']);
-    }
-});
 $getID3   = new getID3;
 $featured = ($user->is_pro == 1) ? 1 : 0;
 $filesize = 0;
